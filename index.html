@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ROĐENDANSKA TORTA</title>
+  <link rel="muzika" href="muzika/"/>
+  <link rel="stylesheet" href="style.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Double+Ink:wght@100..900&family=Tangerine:wght@400;700&display=swap" rel="stylesheet"> <style>
+    #mainTitle {
+      font-size: 45px;
+        font-family: "Bitcount Prop Double Ink", system-ui;
+  font-optical-sizing: auto;
+  font-weight: <weight>;
+  font-style: normal;
+  font-variation-settings:
+    "slnt" 0,
+    "CRSV" 0.5,
+    "ELSH" 0,
+    "ELXP" 0,
+    "SZP1" 0,
+    "SZP2" 0,
+    "XPN1" 0,
+    "XPN2" 0,
+    "YPN1" 0,
+    "YPN2" 0;
+      margin-bottom: 8px;
+    }
+    #subTitle {
+      font-size: 28px;
+        font-family: "Bitcount Prop Double Ink", system-ui;
+  font-optical-sizing: auto;
+  font-weight: <weight>;
+  font-style: normal;
+  font-variation-settings:
+    "slnt" 0,
+    "CRSV" 0.5,
+    "ELSH" 0,
+    "ELXP" 0,
+    "SZP1" 0,
+    "SZP2" 0,
+    "XPN1" 0,
+    "XPN2" 0,
+    "YPN1" 0,
+    "YPN2" 0;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+<audio id="bgMusic" loop>
+  <source src="muzika/50centi.mp3" type="audio/mpeg" />
+</audio>
+  <div class="container">
+    <div id="birthdayText"></div>
+    <div class="cake-container">
+      <div class="cake" id="cake"></div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get("name") || "Laki";
+    let candleCount = parseInt(params.get("candles")) || 24;
+    candleCount = Math.min(Math.max(candleCount, 4), 8);
+
+    document.getElementById("birthdayText").innerHTML = `
+      <div id="mainTitle">Srećan Rođendan, ${name}!</div>
+      <div id="subTitle">Zamisli želju i oduvaj svećice.</div>
+    `;
+
+    const cake = document.getElementById("cake");
+    const colors = ["sveca1-candle", "sveca2-candle"];
+    const CAKE_VISUAL_WIDTH = 35;
+
+    function createCandles(count) {
+      cake.innerHTML = "";
+      const CANDLE_VISUAL_WIDTH = 3;
+      const availableWidth = CAKE_VISUAL_WIDTH;
+      const candlesPerRow = 4;
+      const shiftAmount = 6;
+
+      for (let i = 0; i < count; i++) {
+        const candle = document.createElement("div");
+        candle.classList.add("candle");
+        const colorClass = colors[Math.floor(Math.random() * colors.length)];
+        candle.classList.add(colorClass);
+
+        const row = Math.floor(i / candlesPerRow);
+        const col = i % candlesPerRow;
+        const totalCandlesInRow = Math.min(candlesPerRow, count - row * candlesPerRow);
+        const rowSpacing = availableWidth / (totalCandlesInRow - 1);
+        const leftBase = rowSpacing * (col + 4) - CANDLE_VISUAL_WIDTH / 2;
+        const rowShift = row % 1 === 0 ? 0 : shiftAmount;
+
+        candle.style.position = "absolute";
+        candle.style.top = `${10 + row * 50}px`;
+        candle.style.left = `${leftBase - rowShift + 3}px`;
+
+        cake.appendChild(candle);
+      }
+    }
+
+    createCandles(candleCount);
+
+    async function startMicDetection() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        await audioContext.resume();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        let blown = false;
+        let baseline = 0;
+        let frameCount = 0;
+
+        function detectBlow() {
+          analyser.getByteFrequencyData(dataArray);
+
+          let total = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            total += dataArray[i];
+          }
+          const avg = total / dataArray.length;
+
+          // Kalibracija prvih 60 frejmova (~1 sekunda)
+          if (frameCount < 60) {
+            baseline = (baseline * frameCount + avg) / (frameCount + 1);
+            frameCount++;
+          }
+
+          // Triggeruj ako je avg značajno iznad ambijentalnog šuma
+          if (frameCount >= 60 && avg > baseline + 12 && !blown) {
+            blown = true;
+            blowOutCandles();
+          }
+
+          requestAnimationFrame(detectBlow);
+        }
+
+        detectBlow();
+
+      } catch (err) {
+        console.error("Mic access error:", err);
+      }
+    }
+
+    function blowOutCandles() {
+      const candles = document.querySelectorAll(".candle");
+      candles.forEach((candle) => {
+        const delay = Math.random() * 1000;
+        setTimeout(() => {
+          colors.forEach((color) => {
+            if (candle.classList.contains(color)) {
+              candle.classList.add("blown");
+            }
+          });
+        }, delay);
+      });
+
+      setTimeout(() => {
+        document.getElementById("subTitle").textContent =
+          `Laki moja, volim te puno, mnogo mi nedostaješ! Želim ti Srećan Srećan ROĐENDAN!! 🎉`;
+      }, 1200);
+    }
+
+    startMicDetection();
+  </script>
+</body>
+</html>
