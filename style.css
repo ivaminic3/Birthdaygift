@@ -191,12 +191,12 @@ body {
 
 .cat {
    position: fixed;
-  bottom: 1000px;
+  bottom: 7g00px;
   left: 20px;
   animation: x 1s infinite;
   -webkit-animation: x 1s infinite;
   z-index: 9999;
-  transform: scale(1.6);
+  transform: scale(0.6);
   transform-origin: bottom left;
 }
 
